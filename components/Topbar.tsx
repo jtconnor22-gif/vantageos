@@ -3,16 +3,12 @@
 import { Bell, Search, Plus } from 'lucide-react'
 import { canCreateFile } from '@/lib/rbac'
 import type { UserRole } from '@/lib/supabase/types'
-import { useRouter } from 'next/navigation'
-
 interface TopbarProps {
-  title: string
   role: UserRole
+  onNewFile?: () => void
 }
 
-export default function Topbar({ title, role }: TopbarProps) {
-  const router = useRouter()
-
+export default function Topbar({ role, onNewFile }: TopbarProps) {
   return (
     <header
       className="fixed top-0 right-0 z-30 flex items-center px-6"
@@ -23,16 +19,8 @@ export default function Topbar({ title, role }: TopbarProps) {
         borderBottom: '1px solid var(--border)',
       }}
     >
-      {/* Page title */}
-      <h1
-        className="font-semibold text-[18px] mr-auto"
-        style={{
-          fontFamily: 'Space Grotesk, sans-serif',
-          color: 'var(--text-primary)',
-        }}
-      >
-        {title}
-      </h1>
+      {/* spacer */}
+      <div className="mr-auto" />
 
       {/* Right cluster */}
       <div className="flex items-center gap-3">
@@ -66,7 +54,7 @@ export default function Topbar({ title, role }: TopbarProps) {
         {/* New File — admin only */}
         {canCreateFile(role) && (
           <button
-            onClick={() => router.push('/files/new')}
+            onClick={onNewFile}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white transition-all"
             style={{ backgroundColor: 'var(--accent)' }}
             onMouseEnter={(e) => {
