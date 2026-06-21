@@ -3,17 +3,20 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getFileById } from '@/lib/queries/files'
+import { getLenders } from '@/lib/queries/applications'
 import { STAGE_CONFIG, avatarColor, getInitials, formatMoney } from '@/lib/stage-config'
 import StageSelector from '@/components/StageSelector'
-import type { Application, Document } from '@/lib/supabase/types'
+import FileProfileActions from '@/components/FileProfileActions'
+import type { Application, Document, Task } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
 
 export default async function FileProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [file, supabase] = await Promise.all([
+  const [file, supabase, lenders] = await Promise.all([
     getFileById(id),
     createClient(),
+    getLenders(),
   ])
 
   if (!file) notFound()
@@ -35,6 +38,13 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
     .eq('funding_file_id', id)
     .order('tier')
   const documents = (documentsRaw ?? []) as Document[]
+
+  const { data: tasksRaw } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('funding_file_id', id)
+    .order('due_date', { ascending: true, nullsFirst: false })
+  const tasks = (tasksRaw ?? []) as Task[]
 
   const cfg = STAGE_CONFIG[file.stage]
   const color = avatarColor(file.id)
@@ -122,8 +132,8 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
               <StageSelector fileId={file.id} currentStage={file.stage} />
             </div>
 
-            {/* Stage pill */}
-            <div className="flex items-center gap-2 mb-5">
+            {/* Stage pill + action buttons */}
+            <div className="flex items-center justify-between gap-2 mb-5">
               <span
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
                 style={{ backgroundColor: `${cfg.color}18`, color: cfg.color }}
@@ -131,6 +141,7 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.color }} />
                 {cfg.label}
               </span>
+              <FileProfileActions fileId={file.id} lenders={lenders.map(l => ({ id: l.id, name: l.name }))} />
             </div>
 
             {/* Facts grid */}
@@ -207,6 +218,52 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
             <p className="text-sm" style={{ color: file.internal_notes ? 'var(--text-secondary)' : 'var(--text-muted)', lineHeight: '1.6' }}>
               {file.internal_notes ?? 'No notes yet.'}
             </p>
+          </div>
+
+          {/* Tasks */}
+          <div
+            className="bg-white rounded-2xl overflow-hidden"
+            style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}
+          >
+            <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)', fontFamily: 'Space Grotesk,sans-serif' }}>
+                Tasks
+              </h3>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {tasks.filter(t => t.status !== 'done').length} open
+              </span>
+            </div>
+            {tasks.length === 0 ? (
+              <div className="px-5 py-5 text-sm" style={{ color: 'var(--text-muted)' }}>No tasks yet</div>
+            ) : (
+              tasks.map((task, idx) => {
+                const isOverdue = task.due_date && new Date(task.due_date) < new Date()
+                const done = task.status === 'done'
+                const PCOL: Record<string, string> = { high: '#DC2626', medium: '#D97706', low: '#16A34A' }
+                return (
+                  <div
+                    key={task.id}
+                    className="px-5 py-3 flex items-start gap-3"
+                    style={{ borderBottom: idx < tasks.length - 1 ? '1px solid var(--border)' : 'none', opacity: done ? 0.55 : 1 }}
+                  >
+                    <span className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: PCOL[task.priority] ?? '#94A3B8' }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)', textDecoration: done ? 'line-through' : 'none' }}>
+                        {task.title}
+                      </div>
+                      {task.due_date && (
+                        <div className="text-xs mt-0.5" style={{ color: isOverdue && !done ? '#DC2626' : 'var(--text-muted)' }}>
+                          Due {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium flex-shrink-0 capitalize" style={{ color: 'var(--text-muted)' }}>
+                      {task.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
 

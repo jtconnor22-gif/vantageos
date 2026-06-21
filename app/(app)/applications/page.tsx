@@ -1,71 +1,140 @@
-import { FileText } from 'lucide-react'
+import Link from 'next/link'
+import { getApplications } from '@/lib/queries/applications'
+import { formatMoney } from '@/lib/stage-config'
 
-const STATUSES = [
-  { label: 'Draft', color: '#5A6172', bg: 'var(--subtle)' },
-  { label: 'Submitted', color: '#0EA5E9', bg: '#F0F9FF' },
-  { label: 'In Review', color: '#F59E0B', bg: '#FFFBEB' },
-  { label: 'Approved', color: '#10B981', bg: '#ECFDF5' },
-  { label: 'Declined', color: '#EF4444', bg: '#FEF2F2' },
-  { label: 'Funded', color: '#4F46E5', bg: 'rgba(79,70,229,0.08)' },
-]
+export const dynamic = 'force-dynamic'
 
-export default function ApplicationsPage() {
+const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
+  draft:      { label: 'Draft',      bg: '#F0F1F6', color: '#64748B' },
+  submitted:  { label: 'Submitted',  bg: '#DBEAFE', color: '#2563EB' },
+  in_review:  { label: 'In Review',  bg: '#FEF3C7', color: '#D97706' },
+  approved:   { label: 'Approved',   bg: '#DCFCE7', color: '#16A34A' },
+  declined:   { label: 'Declined',   bg: '#FEE2E2', color: '#DC2626' },
+  funded:     { label: 'Funded',     bg: '#D1FAE5', color: '#059669' },
+}
+
+export default async function ApplicationsPage() {
+  const applications = await getApplications()
+
+  const counts = Object.fromEntries(
+    Object.keys(STATUS_CONFIG).map(s => [s, applications.filter(a => a.status === s).length])
+  )
+
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2
-            className="text-xl font-semibold"
-            style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-primary)' }}
-          >
-            Applications
-          </h2>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-            Track all lender applications across your files
-          </p>
-        </div>
-        <span
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ backgroundColor: 'rgba(79,70,229,0.08)', color: 'var(--accent)' }}
-        >
-          Coming in Phase 3
-        </span>
-      </div>
-
-      <div
-        className="rounded-[14px] bg-white p-10 flex flex-col items-center text-center mb-6"
-        style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid var(--border)' }}
-      >
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-          style={{ backgroundColor: 'rgba(79,70,229,0.08)' }}
-        >
-          <FileText size={28} style={{ color: 'var(--accent)' }} />
-        </div>
-        <h3
-          className="text-xl font-semibold mb-2"
-          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-primary)' }}
-        >
-          Application Tracker
-        </h3>
-        <p className="text-sm max-w-md" style={{ color: 'var(--text-secondary)' }}>
-          Submit and track applications to multiple lenders per file, manage approval decisions,
-          funded amounts, rate terms, and verification requirements — all in one place.
+    <div>
+      <div className="mb-5">
+        <h1 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'var(--text-primary)' }}>
+          Applications
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          {applications.length} total across all files
         </p>
       </div>
 
-      {/* Status legend */}
-      <div className="flex flex-wrap gap-2">
-        {STATUSES.map(({ label, color, bg }) => (
-          <span
-            key={label}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ backgroundColor: bg, color }}
+      {/* Status summary pills */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+          <div
+            key={key}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{ backgroundColor: cfg.bg, color: cfg.color }}
           >
-            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-            {label}
-          </span>
+            {cfg.label}
+            <span
+              className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+              style={{ backgroundColor: `${cfg.color}20` }}
+            >
+              {counts[key] ?? 0}
+            </span>
+          </div>
         ))}
+      </div>
+
+      {/* Table */}
+      <div
+        className="bg-white rounded-2xl overflow-hidden"
+        style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}
+      >
+        <div
+          className="px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
+            gap: '12px',
+            backgroundColor: '#FAFBFD',
+            borderBottom: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+          }}
+        >
+          <span>Client / File</span>
+          <span>Product / Lender</span>
+          <span>Status</span>
+          <span>Approved</span>
+          <span>Funded</span>
+          <span>Submitted</span>
+        </div>
+
+        {applications.length === 0 ? (
+          <div className="px-5 py-12 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            No applications yet. Open a file to add an application.
+          </div>
+        ) : (
+          applications.map((app, idx) => {
+            const sc = STATUS_CONFIG[app.status] ?? STATUS_CONFIG.draft
+            return (
+              <Link key={app.id} href={`/files/${app.funding_file_id}`}>
+                <div
+                  className="px-5 py-3.5 items-center transition-colors"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
+                    gap: '12px',
+                    borderBottom: idx < applications.length - 1 ? '1px solid var(--border)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FAFBFD' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                      {app.funding_files?.client_name ?? '—'}
+                    </div>
+                    <div className="text-xs font-mono mt-0.5" style={{ color: 'var(--accent)' }}>
+                      {app.funding_files?.file_code ?? '—'}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                      {app.product_name ?? app.category ?? '—'}
+                    </div>
+                    <div className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {app.lenders?.name ?? 'No lender'}
+                    </div>
+                  </div>
+                  <div>
+                    <span
+                      className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                      style={{ backgroundColor: sc.bg, color: sc.color }}
+                    >
+                      {sc.label}
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold" style={{ color: '#0EA968' }}>
+                    {formatMoney(app.approved_amount)}
+                  </div>
+                  <div className="text-sm font-semibold" style={{ color: '#16A34A' }}>
+                    {formatMoney(app.funded_amount)}
+                  </div>
+                  <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    {app.submitted_date
+                      ? new Date(app.submitted_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      : '—'}
+                  </div>
+                </div>
+              </Link>
+            )
+          })
+        )}
       </div>
     </div>
   )
