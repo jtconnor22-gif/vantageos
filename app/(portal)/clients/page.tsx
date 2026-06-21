@@ -1,135 +1,102 @@
-import { Users } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { STAGE_CONFIG } from '@/lib/stage-config'
+import type { PipelineStage } from '@/lib/supabase/types'
 
-const STAGE_LABELS: Record<string, string> = {
-  lead_received: 'Lead Received',
-  appointment_scheduled: 'Appointment Scheduled',
-  consultation_completed: 'Consultation Completed',
-  application_sent: 'Application Sent',
-  application_submitted: 'Application Submitted',
-  documents_requested: 'Documents Requested',
-  documents_received: 'Documents Received',
-  conditions_before_submission: 'Conditions Before Submission',
-  submitted_for_funding: 'Submitted for Funding',
-  verification: 'Verification',
-  funded: 'Funded',
-  success_fee_invoice_sent: 'Invoice Sent',
-  success_fee_collected: 'Fee Collected',
-  referral_request: 'Referral Request',
+export const dynamic = 'force-dynamic'
+
+type PartnerFileRow = {
+  id: string | null
+  org_id: string | null
+  file_code: string | null
+  client_name: string | null
+  business_name: string | null
+  stage: PipelineStage | null
+  current_status: string | null
+  referral_partner_id: string | null
+  created_at: string | null
 }
 
-const STAGE_STYLES: Record<string, { color: string; bg: string }> = {
-  funded: { color: '#10B981', bg: '#ECFDF5' },
-  submitted_for_funding: { color: '#0EA5E9', bg: '#F0F9FF' },
-  documents_received: { color: '#F59E0B', bg: '#FFFBEB' },
-  lead_received: { color: '#5A6172', bg: 'var(--subtle)' },
-}
+export default async function PortalClientsPage() {
+  const supabase = await createClient()
+  const { data } = await supabase.from('partner_files_view').select('*').order('created_at', { ascending: false })
+  const rows = (data ?? []) as PartnerFileRow[]
 
-function getStageStyle(stage: string) {
-  return STAGE_STYLES[stage] ?? { color: '#5A6172', bg: 'var(--subtle)' }
-}
-
-// Mock data for partner's files (no financial info)
-const PARTNER_FILES = [
-  {
-    file_code: 'VF-1000',
-    client_name: 'Maria Gonzalez',
-    business_name: 'Gonzalez Grill LLC',
-    stage: 'documents_received',
-    current_status: 'Awaiting underwriting review',
-    created_at: '2026-05-10',
-  },
-  {
-    file_code: 'VF-1004',
-    client_name: 'Tanya Brooks',
-    business_name: 'Brooks Beauty Bar',
-    stage: 'lead_received',
-    current_status: 'Initial intake complete',
-    created_at: '2026-06-20',
-  },
-]
-
-export default function PortalClientsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2
-          className="text-xl font-semibold"
-          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-primary)' }}
-        >
+        <h1 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'var(--text-primary)' }}>
           My Referred Clients
-        </h2>
+        </h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-          Status updates for clients you have referred to Vantage
+          Stage updates only · no financial data shown
         </p>
       </div>
 
-      <div
-        className="rounded-[14px] bg-white overflow-hidden mb-5"
-        style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid var(--border)' }}
-      >
+      <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
         <div
-          className="px-5 py-3 text-xs font-semibold uppercase tracking-wide grid grid-cols-4 gap-4"
-          style={{ backgroundColor: 'var(--subtle)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}
+          className="px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '.9fr 1.1fr 1.2fr 1fr',
+            gap: '12px',
+            backgroundColor: '#FAFBFD',
+            borderBottom: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+          }}
         >
-          <span>Client</span>
-          <span>Business</span>
+          <span>File</span>
+          <span>Client / Business</span>
           <span>Stage</span>
           <span>Status</span>
         </div>
 
-        {PARTNER_FILES.map((file, idx) => {
-          const style = getStageStyle(file.stage)
-          return (
-            <div
-              key={file.file_code}
-              className="grid grid-cols-4 gap-4 px-5 py-4 text-sm items-center"
-              style={{ borderBottom: idx < PARTNER_FILES.length - 1 ? '1px solid var(--border)' : 'none' }}
-            >
-              <div>
-                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {file.client_name}
-                </div>
-                <div className="text-xs font-mono" style={{ color: 'var(--accent)' }}>
+        {rows.length === 0 ? (
+          <div className="px-5 py-12 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            No referred clients yet.
+          </div>
+        ) : (
+          rows.map((file, idx) => {
+            const cfg = file.stage ? STAGE_CONFIG[file.stage] : null
+            return (
+              <div
+                key={file.id ?? idx}
+                className="px-5 py-3.5 items-center"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '.9fr 1.1fr 1.2fr 1fr',
+                  gap: '12px',
+                  borderBottom: idx < rows.length - 1 ? '1px solid var(--border)' : 'none',
+                }}
+              >
+                <div className="text-xs font-mono font-semibold" style={{ color: 'var(--accent)' }}>
                   {file.file_code}
                 </div>
+                <div>
+                  <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{file.client_name}</div>
+                  {file.business_name && (
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{file.business_name}</div>
+                  )}
+                </div>
+                <div>
+                  {cfg ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                      style={{ backgroundColor: `${cfg.color}18`, color: cfg.color }}>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.color }} />
+                      {cfg.label}
+                    </span>
+                  ) : '—'}
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{file.current_status ?? '—'}</div>
               </div>
-              <span style={{ color: 'var(--text-secondary)' }}>{file.business_name}</span>
-              <span>
-                <span
-                  className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{ backgroundColor: style.bg, color: style.color }}
-                >
-                  {STAGE_LABELS[file.stage] ?? file.stage}
-                </span>
-              </span>
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                {file.current_status}
-              </span>
-            </div>
-          )
-        })}
+            )
+          })
+        )}
       </div>
 
-      <div
-        className="rounded-[14px] bg-white p-8 flex flex-col items-center text-center"
-        style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid var(--border)' }}
-      >
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-          style={{ backgroundColor: 'rgba(79,70,229,0.08)' }}
-        >
-          <Users size={22} style={{ color: 'var(--accent)' }} />
-        </div>
-        <h3
-          className="text-base font-semibold mb-2"
-          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-primary)' }}
-        >
-          Full Client Timeline Coming Soon
-        </h3>
-        <p className="text-sm max-w-sm" style={{ color: 'var(--text-secondary)' }}>
-          Stage-by-stage progress tracking, milestone notifications, and document upload links for
-          your clients are coming in Phase 3.
-        </p>
+      <div className="mt-4 px-4 py-3 rounded-xl text-xs flex items-start gap-2"
+        style={{ backgroundColor: 'rgba(79,70,229,0.06)', color: '#6366F1', border: '1px solid rgba(79,70,229,0.12)' }}>
+        <span className="mt-0.5 flex-shrink-0">🔒</span>
+        <span>Revenue, fees, internal notes, and staff assignments are not visible in the partner portal.</span>
       </div>
     </div>
   )
