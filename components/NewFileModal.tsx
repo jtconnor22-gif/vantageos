@@ -85,10 +85,10 @@ export default function NewFileModal({ partners, onClose }: Props) {
         <div className="flex items-center justify-between px-7 pt-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
             <h2 className="text-lg font-semibold" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'var(--text-primary)' }}>
-              New Funding File
+              New Client
             </h2>
             <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              File will be created at Lead Received stage
+              Client will be created at Lead Received stage
             </p>
           </div>
           <button
@@ -196,7 +196,7 @@ export default function NewFileModal({ partners, onClose }: Props) {
               className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-all"
               style={{ backgroundColor: loading ? '#818CF8' : 'var(--accent)', cursor: loading ? 'not-allowed' : 'pointer' }}
             >
-              {loading ? 'Creating...' : 'Create File'}
+              {loading ? 'Creating...' : 'Create Client'}
             </button>
           </div>
         </form>

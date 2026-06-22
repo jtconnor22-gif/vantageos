@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+type Partner = { id: string; name: string; company: string | null }
 
 type FormState = {
   // Personal
@@ -41,6 +43,7 @@ type FormState = {
   // Referral
   referral_source: string
   referral_name: string
+  referral_partner_id: string
   // Consent
   consent: boolean
 }
@@ -55,7 +58,7 @@ const BLANK: FormState = {
   estimated_credit_score: '', any_negative_items: 'no', negative_details: '',
   existing_business_credit: 'no',
   primary_bank: '', bank_account_type: '', bankruptcy_history: 'no',
-  referral_source: '', referral_name: '',
+  referral_source: '', referral_name: '', referral_partner_id: '',
   consent: false,
 }
 
@@ -117,6 +120,14 @@ export default function IntakePage() {
   const [form, setForm] = useState<FormState>(BLANK)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [partners, setPartners] = useState<Partner[]>([])
+
+  useEffect(() => {
+    fetch('/api/public/partners')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: Partner[]) => setPartners(data))
+      .catch(() => {})
+  }, [])
 
   function set(field: keyof FormState, value: string | boolean) {
     setForm(f => ({ ...f, [field]: value }))
@@ -359,6 +370,19 @@ export default function IntakePage() {
                 </Select>
               </div>
               <div><Label>Referred by (name)</Label><Input value={form.referral_name} onChange={v => set('referral_name', v)} placeholder="Partner or person's name" /></div>
+              {partners.length > 0 && (
+                <div className="col-span-2">
+                  <Label>Referred by (Partner)</Label>
+                  <Select value={form.referral_partner_id} onChange={v => set('referral_partner_id', v)}>
+                    <option value="">Select a partner…</option>
+                    {partners.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.company ? ` — ${p.company}` : ''}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
 

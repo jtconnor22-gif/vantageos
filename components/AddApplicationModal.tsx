@@ -18,7 +18,7 @@ export default function AddApplicationModal({ fileId, lenders, onClose }: Props)
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({ lender_id: '', product_name: '', category: '', notes: '' })
+  const [form, setForm] = useState({ lender_id: '', product_name: '', category: '', status: 'draft', approved_amount: '', funded_amount: '', submitted_date: '', decision_date: '', notes: '' })
 
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -29,7 +29,15 @@ export default function AddApplicationModal({ fileId, lenders, onClose }: Props)
       const res = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, funding_file_id: fileId, lender_id: form.lender_id || null }),
+        body: JSON.stringify({
+          ...form,
+          funding_file_id: fileId,
+          lender_id: form.lender_id || null,
+          approved_amount: form.approved_amount ? parseFloat(form.approved_amount) : null,
+          funded_amount: form.funded_amount ? parseFloat(form.funded_amount) : null,
+          submitted_date: form.submitted_date || null,
+          decision_date: form.decision_date || null,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -63,6 +71,32 @@ export default function AddApplicationModal({ fileId, lenders, onClose }: Props)
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </FormField>
+          <FormField label="Status">
+            <select value={form.status} onChange={e => set('status', e.target.value)} className="fi">
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="in_review">In Review</option>
+              <option value="approved">Approved</option>
+              <option value="declined">Declined</option>
+              <option value="funded">Funded</option>
+            </select>
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Approved Amount ($)">
+              <input type="number" min="0" step="0.01" value={form.approved_amount} onChange={e => set('approved_amount', e.target.value)} placeholder="0.00" className="fi" />
+            </FormField>
+            <FormField label="Funded Amount ($)">
+              <input type="number" min="0" step="0.01" value={form.funded_amount} onChange={e => set('funded_amount', e.target.value)} placeholder="0.00" className="fi" />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Submitted Date">
+              <input type="date" value={form.submitted_date} onChange={e => set('submitted_date', e.target.value)} className="fi" />
+            </FormField>
+            <FormField label="Decision Date">
+              <input type="date" value={form.decision_date} onChange={e => set('decision_date', e.target.value)} className="fi" />
+            </FormField>
+          </div>
           <FormField label="Notes">
             <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Optional notes..." rows={2} className="fi" style={{ resize: 'none' }} />
           </FormField>

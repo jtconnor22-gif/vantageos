@@ -73,6 +73,7 @@ export default async function SettingsPage() {
           teamMembers={teamMembers}
           partners={partners}
           currentUserRole={profile?.role ?? ''}
+          currentUserId={user?.id ?? ''}
         />
 
         {/* Static config sections */}

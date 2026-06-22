@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       primary_bank, bank_account_type,
       estimated_credit_score, any_negative_items, negative_details, existing_business_credit,
       bankruptcy_history,
-      referral_source, referral_name,
+      referral_source, referral_name, referral_partner_id,
     } = body
 
     if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
@@ -67,6 +67,7 @@ export async function POST(req: Request) {
         funding_type: funding_type || null,
         stage: 'lead_received',
         current_status: noteLines || null,
+        referral_partner_id: referral_partner_id || null,
       }])
       .select('id, file_code')
       .single()

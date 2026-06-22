@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const profile = pd as Profile
 
     const body = await request.json()
-    const { funding_file_id, lender_id, product_name, category, notes } = body
+    const { funding_file_id, lender_id, product_name, category, notes, status, approved_amount, funded_amount, submitted_date, decision_date } = body
 
     if (!funding_file_id) return NextResponse.json({ error: 'funding_file_id required' }, { status: 400 })
 
@@ -26,7 +26,11 @@ export async function POST(request: Request) {
       product_name: product_name || null,
       category: category || null,
       notes: notes || null,
-      status: 'draft',
+      status: status || 'draft',
+      approved_amount: approved_amount ?? null,
+      funded_amount: funded_amount ?? null,
+      submitted_date: submitted_date || null,
+      decision_date: decision_date || null,
     }]).select().single()
 
     if (error) throw error

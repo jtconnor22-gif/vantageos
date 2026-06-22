@@ -8,6 +8,8 @@ import { STAGE_CONFIG, avatarColor, getInitials, formatMoney } from '@/lib/stage
 import StageSelector from '@/components/StageSelector'
 import FileProfileActions from '@/components/FileProfileActions'
 import AssigneeSelector from '@/components/AssigneeSelector'
+import EditClientButton from '@/components/EditClientButton'
+import InternalNotes from '@/components/InternalNotes'
 import type { Application, Document, Task } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
@@ -137,7 +139,10 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
                   <span className="font-mono text-xs">{file.file_code}</span>
                 </div>
               </div>
-              <StageSelector fileId={file.id} currentStage={file.stage} />
+              <div className="flex items-center gap-2">
+                <EditClientButton fileId={file.id} fileData={file} />
+                <StageSelector fileId={file.id} currentStage={file.stage} />
+              </div>
             </div>
 
             {/* Stage pill + action buttons */}
@@ -229,12 +234,7 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
             className="bg-white rounded-2xl p-5"
             style={{ border: '1px solid var(--border)', boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}
           >
-            <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)', fontFamily: 'Space Grotesk,sans-serif' }}>
-              Internal Notes
-            </h3>
-            <p className="text-sm" style={{ color: file.internal_notes ? 'var(--text-secondary)' : 'var(--text-muted)', lineHeight: '1.6' }}>
-              {file.internal_notes ?? 'No notes yet.'}
-            </p>
+            <InternalNotes fileId={file.id} initialNotes={file.internal_notes} />
           </div>
 
           {/* Tasks */}

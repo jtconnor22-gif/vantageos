@@ -12,10 +12,10 @@ export default async function FilesPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-semibold" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'var(--text-primary)' }}>
-            Funding Files
+            Clients
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {files.length} total file{files.length !== 1 ? 's' : ''}
+            {files.length} total client{files.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>

@@ -38,7 +38,7 @@ export function navItemsForRole(role: UserRole) {
   const all = [
     { label: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
     { label: 'Pipeline', href: '/pipeline', icon: 'Columns2' },
-    { label: 'Files', href: '/files', icon: 'FolderOpen' },
+    { label: 'Clients', href: '/files', icon: 'FolderOpen' },
     { label: 'Applications', href: '/applications', icon: 'FileText' },
     { label: 'Documents', href: '/documents', icon: 'Files' },
     { label: 'Tasks', href: '/tasks', icon: 'CheckSquare' },
