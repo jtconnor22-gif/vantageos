@@ -1,13 +1,11 @@
-import { Settings } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import type { Profile, ReferralPartner } from '@/lib/supabase/types'
+import SettingsClient from './SettingsClient'
 
 const SETTING_SECTIONS = [
   {
     title: 'Organization',
     items: ['Org name & branding', 'White-label config', 'Billing & plan'],
-  },
-  {
-    title: 'Team',
-    items: ['User management', 'Role permissions', 'Invite members'],
   },
   {
     title: 'Integrations',
@@ -19,7 +17,40 @@ const SETTING_SECTIONS = [
   },
 ]
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user?.id ?? '')
+    .single()
+
+  const profile = currentProfile as Profile | null
+
+  // Fetch team members in same org
+  const { data: teamData } = profile
+    ? await supabase
+        .from('profiles')
+        .select('*')
+        .eq('org_id', profile.org_id)
+        .order('full_name')
+    : { data: [] }
+
+  const teamMembers = (teamData ?? []) as Profile[]
+
+  // Fetch referral partners in same org
+  const { data: partnerData } = profile
+    ? await supabase
+        .from('referral_partners')
+        .select('*')
+        .eq('org_id', profile.org_id)
+        .order('name')
+    : { data: [] }
+
+  const partners = (partnerData ?? []) as ReferralPartner[]
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-5">
@@ -34,15 +65,17 @@ export default function SettingsPage() {
             Configure your Vantage workspace
           </p>
         </div>
-        <span
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ backgroundColor: 'rgba(79,70,229,0.08)', color: 'var(--accent)' }}
-        >
-          Coming in Phase 3
-        </span>
       </div>
 
       <div className="space-y-4">
+        {/* Team + Partners (interactive) */}
+        <SettingsClient
+          teamMembers={teamMembers}
+          partners={partners}
+          currentUserRole={profile?.role ?? ''}
+        />
+
+        {/* Static config sections */}
         {SETTING_SECTIONS.map(({ title, items }) => (
           <div
             key={title}

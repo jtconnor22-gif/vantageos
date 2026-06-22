@@ -1,20 +1,7 @@
-import Link from 'next/link'
 import { getTasks } from '@/lib/queries/tasks'
+import TaskRow, { type Task as TaskRowTask } from '@/components/TaskRow'
 
 export const dynamic = 'force-dynamic'
-
-const PRIORITY_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  high:   { label: 'High',   bg: '#FEE2E2', color: '#DC2626' },
-  medium: { label: 'Medium', bg: '#FEF3C7', color: '#D97706' },
-  low:    { label: 'Low',    bg: '#DCFCE7', color: '#16A34A' },
-}
-
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  open:        { label: 'Open',        color: '#64748B' },
-  in_progress: { label: 'In Progress', color: '#2563EB' },
-  done:        { label: 'Done',        color: '#10B981' },
-  cancelled:   { label: 'Cancelled',   color: '#94A3B8' },
-}
 
 export default async function TasksPage() {
   const tasks = await getTasks()
@@ -78,16 +65,12 @@ export default async function TasksPage() {
           </div>
         ) : (
           open.map((task, idx) => {
-            const pc = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium
-            const sc = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.open
-            const isOverdue = task.due_date && new Date(task.due_date) < new Date()
+            const isOverdue = !!(task.due_date && new Date(task.due_date) < new Date())
             return (
               <TaskRow
                 key={task.id}
-                task={task}
-                pc={pc}
-                sc={sc}
-                isOverdue={!!isOverdue}
+                task={task as unknown as TaskRowTask}
+                isOverdue={isOverdue}
                 last={idx === open.length - 1}
               />
             )
@@ -104,90 +87,17 @@ export default async function TasksPage() {
           <div className="px-5 py-3 text-xs font-semibold" style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
             COMPLETED / CANCELLED ({done.length})
           </div>
-          {done.map((task, idx) => {
-            const pc = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium
-            const sc = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.done
-            return (
-              <TaskRow
-                key={task.id}
-                task={task}
-                pc={pc}
-                sc={sc}
-                isOverdue={false}
-                last={idx === done.length - 1}
-                strikethrough
-              />
-            )
-          })}
+          {done.map((task, idx) => (
+            <TaskRow
+              key={task.id}
+              task={task as unknown as TaskRowTask}
+              isOverdue={false}
+              last={idx === done.length - 1}
+              strikethrough
+            />
+          ))}
         </div>
       )}
-    </div>
-  )
-}
-
-function TaskRow({
-  task, pc, sc, isOverdue, last, strikethrough,
-}: {
-  task: ReturnType<typeof getTasks> extends Promise<Array<infer T>> ? T : never
-  pc: { label: string; bg: string; color: string }
-  sc: { label: string; color: string }
-  isOverdue: boolean
-  last: boolean
-  strikethrough?: boolean
-}) {
-  return (
-    <div
-      className="px-5 py-3.5 items-center"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr .8fr .8fr .7fr',
-        gap: '12px',
-        borderBottom: last ? 'none' : '1px solid var(--border)',
-      }}
-    >
-      <div className="min-w-0">
-        <span
-          className="text-sm font-medium"
-          style={{
-            color: strikethrough ? 'var(--text-muted)' : 'var(--text-primary)',
-            textDecoration: strikethrough ? 'line-through' : 'none',
-          }}
-        >
-          {task.title}
-        </span>
-        {task.assigned_profile && (
-          <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            → {task.assigned_profile.full_name}
-          </div>
-        )}
-      </div>
-      <div>
-        {task.funding_files ? (
-          <Link href={`/files/${task.funding_files.id}`}>
-            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--accent)' }}>
-              {task.funding_files.file_code}
-            </span>
-          </Link>
-        ) : (
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>
-        )}
-      </div>
-      <div>
-        <span
-          className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-          style={{ backgroundColor: pc.bg, color: pc.color }}
-        >
-          {pc.label}
-        </span>
-      </div>
-      <div className="text-xs font-medium" style={{ color: sc.color }}>
-        {sc.label}
-      </div>
-      <div className="text-xs font-medium" style={{ color: isOverdue ? '#DC2626' : 'var(--text-secondary)' }}>
-        {task.due_date
-          ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : '—'}
-      </div>
     </div>
   )
 }
