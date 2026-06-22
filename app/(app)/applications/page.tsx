@@ -84,7 +84,7 @@ export default async function ApplicationsPage() {
             return (
               <Link key={app.id} href={`/files/${app.funding_file_id}`}>
                 <div
-                  className="px-5 py-3.5 items-center transition-colors"
+                  className="px-5 py-3.5 items-center transition-colors hover:bg-[#FAFBFD]"
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
@@ -92,8 +92,6 @@ export default async function ApplicationsPage() {
                     borderBottom: idx < applications.length - 1 ? '1px solid var(--border)' : 'none',
                     cursor: 'pointer',
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FAFBFD' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>

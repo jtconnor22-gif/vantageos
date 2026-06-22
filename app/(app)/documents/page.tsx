@@ -105,7 +105,7 @@ export default async function DocumentsPage() {
             return (
               <Link key={doc.id} href={`/files/${doc.funding_file_id}`}>
                 <div
-                  className="px-5 py-3.5 items-center transition-colors"
+                  className="px-5 py-3.5 items-center transition-colors hover:bg-[#FAFBFD]"
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '2fr 1.2fr .7fr .8fr .7fr',
@@ -113,8 +113,6 @@ export default async function DocumentsPage() {
                     borderBottom: idx < documents.length - 1 ? '1px solid var(--border)' : 'none',
                     cursor: 'pointer',
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FAFBFD' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: sc.dot }} />

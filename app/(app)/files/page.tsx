@@ -57,15 +57,13 @@ export default async function FilesPage() {
             return (
               <Link key={file.id} href={`/files/${file.id}`}>
                 <div
-                  className="px-5 py-3.5 grid items-center transition-colors"
+                  className="px-5 py-3.5 grid items-center transition-colors hover:bg-[#FAFBFD]"
                   style={{
                     gridTemplateColumns: '1.6fr 1fr .8fr 1fr 1fr .9fr',
                     gap: '12px',
                     borderBottom: idx < files.length - 1 ? '1px solid var(--border)' : 'none',
                     cursor: 'pointer',
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FAFBFD' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
                 >
                   {/* Client / Business */}
                   <div className="flex items-center gap-3 min-w-0">

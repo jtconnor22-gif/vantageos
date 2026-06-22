@@ -98,7 +98,6 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
         href="/files"
         className="inline-flex items-center gap-1.5 text-sm mb-5 transition-colors"
         style={{ color: 'var(--text-secondary)' }}
-        onMouseEnter={() => {}}
       >
         <ArrowLeft size={14} />
         All Files
