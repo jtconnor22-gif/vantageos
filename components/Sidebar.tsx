@@ -150,14 +150,12 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'
-                  e.currentTarget.style.color = '#FFFFFF'
+                  e.currentTarget.style.backgroundColor = `${accentColor}14`
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
                   e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = '#8891A8'
                 }
               }}
             >
@@ -177,10 +175,10 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
                 <Icon
                   size={17}
                   strokeWidth={isActive ? 2.2 : 1.8}
-                  style={{ color: isActive ? accentColor : 'inherit' }}
+                  style={{ color: accentColor, opacity: isActive ? 1 : 0.7 }}
                 />
               )}
-              {item.label}
+              <span style={{ color: isActive ? accentColor : '#8891A8' }}>{item.label}</span>
             </Link>
           )
         })}
