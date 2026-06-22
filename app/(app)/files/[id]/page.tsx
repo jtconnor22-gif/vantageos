@@ -7,6 +7,7 @@ import { getLenders } from '@/lib/queries/applications'
 import { STAGE_CONFIG, avatarColor, getInitials, formatMoney } from '@/lib/stage-config'
 import StageSelector from '@/components/StageSelector'
 import FileProfileActions from '@/components/FileProfileActions'
+import AssigneeSelector from '@/components/AssigneeSelector'
 import type { Application, Document, Task } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,14 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
     createClient(),
     getLenders(),
   ])
+
+  // Fetch team members for assignment dropdown
+  const { data: teamRaw } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .in('role', ['admin', 'funding_manager', 'virtual_assistant'])
+    .order('full_name')
+  const teamMembers = (teamRaw ?? []) as Array<{ id: string; full_name: string; role: string }>
 
   if (!file) notFound()
 
@@ -63,7 +72,7 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
     { label: 'Funding Goal',     value: formatMoney(file.funding_goal) },
     { label: 'Funding Type',     value: file.funding_type },
     { label: 'Referral Partner', value: file.referral_partners?.name },
-    { label: 'Assigned To',      value: file.assigned_profile?.full_name },
+    { label: 'Assigned To',      value: '__ASSIGNEE__' },
     { label: 'Last Contact',     value: file.last_contact_date ? new Date(file.last_contact_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null },
     { label: 'Next Follow-Up',   value: file.next_followup_date ? new Date(file.next_followup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null },
     { label: 'Status',           value: file.current_status },
@@ -148,9 +157,18 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
               {facts.map(({ label, value }) => (
                 <div key={label}>
                   <div className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>{label}</div>
-                  <div className="text-sm font-medium" style={{ color: value ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                    {value ?? '—'}
-                  </div>
+                  {value === '__ASSIGNEE__' ? (
+                    <AssigneeSelector
+                      fileId={id}
+                      currentAssigneeId={file.assigned_user_id ?? null}
+                      currentAssigneeName={file.assigned_profile?.full_name ?? null}
+                      teamMembers={teamMembers}
+                    />
+                  ) : (
+                    <div className="text-sm font-medium" style={{ color: value ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      {value ?? '—'}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

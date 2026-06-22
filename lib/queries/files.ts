@@ -3,20 +3,35 @@ import type { FundingFile, ReferralPartner, Profile, PipelineStage } from '@/lib
 
 export type FileWithRelations = FundingFile & {
   referral_partners: Pick<ReferralPartner, 'id' | 'name' | 'company'> | null
-  assigned_profile: Pick<Profile, 'id' | 'full_name'> | null
+  assigned_profile: Pick<Profile, 'id' | 'full_name' | 'role'> | null
+}
+
+async function getCallerRole(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { userId: null, role: null }
+  const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  return { userId: user.id, role: (data as any)?.role ?? null }
 }
 
 export async function getFiles(): Promise<FileWithRelations[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { userId, role } = await getCallerRole(supabase)
+
+  let query = supabase
     .from('funding_files')
     .select(`
       *,
       referral_partners ( id, name, company ),
-      assigned_profile:profiles!funding_files_assigned_user_id_fkey ( id, full_name )
+      assigned_profile:profiles!funding_files_assigned_user_id_fkey ( id, full_name, role )
     `)
     .order('created_at', { ascending: false })
 
+  // VAs only see files assigned to them
+  if (role === 'virtual_assistant' && userId) {
+    query = (query as any).eq('assigned_user_id', userId)
+  }
+
+  const { data, error } = await query
   if (error) {
     console.error('getFiles error:', error)
     return []
@@ -31,7 +46,7 @@ export async function getFileById(id: string): Promise<FileWithRelations | null>
     .select(`
       *,
       referral_partners ( id, name, company ),
-      assigned_profile:profiles!funding_files_assigned_user_id_fkey ( id, full_name )
+      assigned_profile:profiles!funding_files_assigned_user_id_fkey ( id, full_name, role )
     `)
     .eq('id', id)
     .single()
