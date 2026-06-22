@@ -33,6 +33,20 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Settings,
 }
 
+// Per-route accent colors for color-coded nav
+const NAV_COLORS: Record<string, string> = {
+  '/dashboard':    '#4F46E5', // indigo
+  '/pipeline':     '#0EA5E9', // sky blue
+  '/files':        '#F59E0B', // amber
+  '/applications': '#10B981', // emerald
+  '/documents':    '#EF4444', // red
+  '/tasks':        '#8B5CF6', // purple
+  '/partners':     '#EC4899', // pink
+  '/revenue':      '#059669', // green
+  '/ai':           '#6366F1', // indigo-light
+  '/settings':     '#64748B', // slate
+}
+
 function getInitials(name: string) {
   return name
     .split(' ')
@@ -123,6 +137,7 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
           const Icon = ICON_MAP[item.icon]
           const isActive =
             pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+          const accentColor = NAV_COLORS[item.href] ?? '#4F46E5'
 
           return (
             <Link
@@ -130,8 +145,8 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
               href={item.href}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative group"
               style={{
-                color: isActive ? '#4F46E5' : '#8891A8',
-                backgroundColor: isActive ? 'rgba(79,70,229,0.10)' : 'transparent',
+                color: isActive ? accentColor : '#8891A8',
+                backgroundColor: isActive ? `${accentColor}18` : 'transparent',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -149,11 +164,11 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
               {/* Active indicator bar */}
               {isActive && (
                 <span
-                  className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full"
+                  className="absolute left-0 top-1/2 -translate-y-1/2"
                   style={{
                     width: '3px',
                     height: '20px',
-                    backgroundColor: '#4F46E5',
+                    backgroundColor: accentColor,
                     borderRadius: '0 2px 2px 0',
                   }}
                 />
@@ -162,7 +177,7 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
                 <Icon
                   size={17}
                   strokeWidth={isActive ? 2.2 : 1.8}
-                  style={{ color: isActive ? '#4F46E5' : 'inherit' }}
+                  style={{ color: isActive ? accentColor : 'inherit' }}
                 />
               )}
               {item.label}
