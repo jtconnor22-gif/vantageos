@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.5.2",
+    "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.47.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
