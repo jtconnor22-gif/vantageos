@@ -26,23 +26,25 @@ export default async function DashboardPage() {
     { data: docsRaw },
   ] = await Promise.all([
     (supabase as any).from('funding_files').select('id, client_name, business_name, stage, funding_type, next_follow_up, created_at').order('created_at', { ascending: false }),
-    (supabase as any).from('revenue').select('funded_amount, success_fee_amount, success_fee_invoice_sent, success_fee_collected, profit'),
+    (supabase as any).from('revenue').select('funded_amount, success_fee_amount, success_fee_invoice_sent, success_fee_collected, profit, created_at'),
     (supabase as any).from('tasks').select('id, title, status, due_date, priority, funding_file_id').eq('status', 'open'),
     (supabase as any).from('applications').select('id, status, product_name, funding_file_id, funding_files(client_name, business_name)').in('status', ['submitted','in_review']),
     (supabase as any).from('documents').select('id, name, status, funding_file_id, funding_files(client_name, business_name)').eq('status', 'missing'),
   ])
 
   const files = (allFiles ?? []) as Array<{ id: string; client_name: string; business_name: string | null; stage: string; funding_type: string | null; next_follow_up: string | null; created_at: string }>
-  const revenue = (revenueRows ?? []) as Array<{ funded_amount: number; success_fee_amount: number; success_fee_invoice_sent: boolean; success_fee_collected: boolean; profit: number }>
+  const revenue = (revenueRows ?? []) as Array<{ funded_amount: number; success_fee_amount: number; success_fee_invoice_sent: boolean; success_fee_collected: boolean; profit: number; created_at: string }>
   const tasks = (openTasks ?? []) as Array<{ id: string; title: string; status: string; due_date: string | null; priority: string | null; funding_file_id: string }>
   const apps = (pendingApps ?? []) as Array<{ id: string; status: string; product_name: string; funding_file_id: string; funding_files: { client_name: string; business_name: string | null } | null }>
   const missingDocs = (docsRaw ?? []) as Array<{ id: string; name: string; status: string; funding_file_id: string; funding_files: { client_name: string; business_name: string | null } | null }>
 
   // Computed KPIs
   const activeClients = files.filter(f => ACTIVE_STAGES.includes(f.stage as PipelineStage)).length
-  const fundedThisMonth = files.filter(f => FUNDED_STAGES.includes(f.stage as PipelineStage) && f.created_at >= startOfMonth).length
+  const revenueThisMonthRows = revenue.filter(r => r.created_at >= startOfMonth)
+  const fundedThisMonth = revenueThisMonthRows.length
+  const fundedThisMonthAmount = revenueThisMonthRows.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
   const totalFundedAmount = revenue.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
-  const revenueThisMonth = revenue.reduce((s, r) => s + (r.success_fee_amount ?? 0), 0)
+  const revenueThisMonth = revenueThisMonthRows.reduce((s, r) => s + (r.success_fee_amount ?? 0), 0)
   const successFeesOutstanding = revenue.filter(r => r.success_fee_invoice_sent && !r.success_fee_collected).reduce((s, r) => s + (r.success_fee_amount ?? 0), 0)
   const overdueFollowUps = files.filter(f => f.next_follow_up && f.next_follow_up <= todayStr && !FUNDED_STAGES.includes(f.stage as PipelineStage))
   const overdueTasks = tasks.filter(t => t.due_date && t.due_date < todayStr)
@@ -95,7 +97,7 @@ export default async function DashboardPage() {
         {[
           { label: 'Active Clients', value: activeClients, sub: `${files.length} total files`, color: '#4F46E5', bg: 'rgba(79,70,229,0.08)' },
           { label: 'Pending Applications', value: apps.length, sub: `${apps.length} in review`, color: '#0EA5E9', bg: 'rgba(14,165,233,0.08)' },
-          { label: 'Funded This Month', value: fundedThisMonth, sub: `${clientsFunded.length} total funded`, color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+          { label: 'Funded This Month', value: `${fundedThisMonth} deals · ${formatMoney(fundedThisMonthAmount)}`, sub: `${clientsFunded.length} total funded all-time`, color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
           { label: 'Revenue This Month', value: formatMoney(revenueThisMonth), sub: `${formatMoney(totalFundedAmount)} total funded`, color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)' },
           { label: 'Success Fees Outstanding', value: formatMoney(successFeesOutstanding), sub: `${revenue.filter(r => r.success_fee_invoice_sent && !r.success_fee_collected).length} files awaiting`, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
         ].map(k => (

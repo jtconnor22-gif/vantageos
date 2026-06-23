@@ -160,7 +160,7 @@ export default function IntakePage() {
           </div>
           <h2 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>Application Received!</h2>
           <p className="text-sm mb-3" style={{ color: '#6B7280' }}>Thank you! A funding specialist will contact you within 1 business day to review your options.</p>
-          <p className="text-xs" style={{ color: '#9CA3AF' }}>Questions? Email <a href="mailto:gracefulprosperityllc@gmail.com" className="text-indigo-600">gracefulprosperityllc@gmail.com</a></p>
+          <p className="text-xs" style={{ color: '#9CA3AF' }}>Questions? Reach out to your advisor and we&apos;ll be happy to help.</p>
         </div>
       </div>
     )
@@ -392,7 +392,7 @@ export default function IntakePage() {
               <input type="checkbox" checked={form.consent} onChange={e => set('consent', e.target.checked)}
                 className="mt-0.5 accent-indigo-600 w-4 h-4 flex-shrink-0" />
               <span className="text-sm" style={{ color: '#374151' }}>
-                I authorize Graceful Prosperity LLC to pull a soft inquiry on my personal and/or business credit report for pre-qualification purposes. I confirm the information provided is accurate and I agree to be contacted regarding funding options. I understand this is not a guarantee of funding.
+                I authorize Vantage OS to pull a soft inquiry on my personal and/or business credit report for pre-qualification purposes. I confirm the information provided is accurate and I agree to be contacted regarding funding options. I understand this is not a guarantee of funding.
               </span>
             </label>
           </div>
@@ -410,7 +410,7 @@ export default function IntakePage() {
           </button>
 
           <p className="text-xs text-center pb-4" style={{ color: '#9CA3AF' }}>
-            Your information is protected and never shared without your permission. · Graceful Prosperity LLC
+            Your information is protected and never shared without your permission. · Vantage OS
           </p>
         </form>
       </div>
