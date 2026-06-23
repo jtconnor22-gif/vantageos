@@ -49,9 +49,12 @@ export default async function DashboardPage() {
   // Total pipeline: all files that are not fully closed (fee_collected)
   const totalPipeline = files.filter(f => !EXCLUDED_FROM_PIPELINE.includes(f.stage as PipelineStage)).length
   const revenueThisMonthRows = revenue.filter(r => r.created_at >= startOfMonth)
-  const fundedThisMonth = revenueThisMonthRows.length
-  const fundedThisMonthAmount = revenueThisMonthRows.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
-  const totalFundedAmount = revenue.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
+  // "Funded This Month" shows all-time total funded across all revenue records.
+  // Using a month filter on created_at would miss files funded before this month
+  // whose revenue records were updated (not re-created) this month.
+  const fundedThisMonth = revenue.length
+  const fundedThisMonthAmount = revenue.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
+  const totalFundedAmount = fundedThisMonthAmount
   const revenueThisMonth = revenueThisMonthRows.reduce((s, r) => s + (r.success_fee_amount ?? 0), 0)
   const successFeesOutstanding = revenue.filter(r => r.success_fee_invoice_sent && !r.success_fee_collected).reduce((s, r) => s + (r.success_fee_amount ?? 0), 0)
   const overdueFollowUps = files.filter(f => f.next_followup_date && f.next_followup_date <= todayStr && !FUNDED_STAGES.includes(f.stage as PipelineStage))
@@ -105,7 +108,7 @@ export default async function DashboardPage() {
         {[
           { label: 'Active Clients', value: activeClients, sub: `${files.length} total files in system`, color: '#4F46E5', bg: 'rgba(79,70,229,0.08)' },
           { label: 'Pending Applications', value: apps.length, sub: `${apps.length} in review`, color: '#0EA5E9', bg: 'rgba(14,165,233,0.08)' },
-          { label: 'Funded This Month', value: `${fundedThisMonth} deals · ${formatMoney(fundedThisMonthAmount)}`, sub: `${clientsFunded.length} total funded all-time`, color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+          { label: 'Total Funded', value: `${fundedThisMonth} deals · ${formatMoney(fundedThisMonthAmount)}`, sub: `${clientsFunded.length} files at funded stage`, color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
           { label: 'Revenue This Month', value: formatMoney(revenueThisMonth), sub: `${formatMoney(totalFundedAmount)} total funded`, color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)' },
           { label: 'Success Fees Outstanding', value: formatMoney(successFeesOutstanding), sub: `${revenue.filter(r => r.success_fee_invoice_sent && !r.success_fee_collected).length} files awaiting`, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
         ].map(k => (

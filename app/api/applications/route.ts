@@ -8,6 +8,72 @@ const adminClient = createServiceClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Recalculate and sync the revenue record for a funding file by summing ALL
+// funded applications for that file, not just the one being inserted.
+async function syncRevenue(fundingFileId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: apps } = await (adminClient as any)
+    .from('applications')
+    .select('funded_amount')
+    .eq('funding_file_id', fundingFileId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const totalFunded = (apps ?? []).reduce((sum: number, a: any) =>
+    sum + (parseFloat(a.funded_amount) || 0), 0)
+
+  if (totalFunded <= 0) return // nothing to sync
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (adminClient as any)
+    .from('revenue')
+    .select('id, success_fee_pct')
+    .eq('funding_file_id', fundingFileId)
+    .maybeSingle()
+
+  if (existing) {
+    const pct = existing.success_fee_pct ?? 0.10
+    const fee = totalFunded * pct
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (adminClient as any)
+      .from('revenue')
+      .update({
+        funded_amount: totalFunded,
+        success_fee_amount: fee,
+        gross_revenue: fee,
+        net_revenue: fee,
+        profit: fee,
+      })
+      .eq('id', existing.id)
+  } else {
+    // Need org_id to insert — fetch from the file
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: file } = await (adminClient as any)
+      .from('funding_files')
+      .select('org_id')
+      .eq('id', fundingFileId)
+      .single()
+
+    if (!file) return
+
+    const fee = totalFunded * 0.10
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (adminClient as any)
+      .from('revenue')
+      .insert([{
+        org_id: file.org_id,
+        funding_file_id: fundingFileId,
+        funded_amount: totalFunded,
+        success_fee_pct: 0.10,
+        success_fee_amount: fee,
+        gross_revenue: fee,
+        net_revenue: fee,
+        profit: fee,
+        success_fee_invoice_sent: false,
+        success_fee_collected: false,
+      }])
+  }
+}
+
 async function runSideEffects(app: {
   id: string
   org_id: string
@@ -16,54 +82,12 @@ async function runSideEffects(app: {
   funded_amount: number | null
   approved_amount: number | null
 }) {
-  const { org_id, funding_file_id, status, funded_amount } = app
+  const { funding_file_id, status } = app
 
-  // ── A. Revenue upsert ───────────────────────────────────────────
-  if (status === 'funded' && funded_amount && funded_amount > 0) {
-    const success_fee_amount = funded_amount * 0.10
-    const gross_revenue = success_fee_amount
-    const net_revenue = success_fee_amount
-    const profit = success_fee_amount
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existingRevenue } = await (adminClient as any)
-      .from('revenue')
-      .select('id, success_fee_pct')
-      .eq('funding_file_id', funding_file_id)
-      .maybeSingle()
-
-    if (existingRevenue) {
-      const pct = existingRevenue.success_fee_pct ?? 0.10
-      const fee = funded_amount * pct
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminClient as any)
-        .from('revenue')
-        .update({
-          funded_amount,
-          success_fee_amount: fee,
-          gross_revenue: fee,
-          net_revenue: fee,
-          profit: fee,
-        })
-        .eq('id', existingRevenue.id)
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (adminClient as any)
-        .from('revenue')
-        .insert([{
-          org_id,
-          funding_file_id,
-          funded_amount,
-          success_fee_pct: 0.10,
-          success_fee_amount,
-          gross_revenue,
-          net_revenue,
-          profit,
-          success_fee_invoice_sent: false,
-          success_fee_collected: false,
-        }])
-    }
-  }
+  // ── A. Revenue sync ─────────────────────────────────────────────
+  // Always re-sum ALL applications for the file so the revenue record is correct
+  // regardless of how many applications have been funded.
+  await syncRevenue(funding_file_id)
 
   // ── B. File stage sync ──────────────────────────────────────────
   if (status === 'funded') {
