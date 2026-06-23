@@ -27,6 +27,8 @@ interface Props {
 export default function EditApplicationModal({ application, lenders, onClose }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
     product_name: application.product_name ?? '',
@@ -178,6 +180,54 @@ export default function EditApplicationModal({ application, lenders, onClose }: 
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
+          </div>
+
+          {/* Delete section */}
+          <div className="pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+            {!confirmDelete ? (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="w-full py-2 rounded-lg text-xs font-medium"
+                style={{ color: '#DC2626', backgroundColor: 'rgba(220,38,38,0.06)' }}
+              >
+                Delete Application
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-center" style={{ color: '#DC2626' }}>This permanently removes the application and recalculates revenue. Are you sure?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 py-2 rounded-lg text-xs font-medium border"
+                    style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={async () => {
+                      setDeleting(true)
+                      try {
+                        const res = await fetch(`/api/applications/${application.id}`, { method: 'DELETE' })
+                        if (!res.ok) { const d = await res.json(); throw new Error(d.error) }
+                        onClose()
+                        router.refresh()
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Delete failed')
+                        setConfirmDelete(false)
+                      } finally { setDeleting(false) }
+                    }}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
+                    style={{ backgroundColor: deleting ? '#F87171' : '#DC2626' }}
+                  >
+                    {deleting ? 'Deleting...' : 'Yes, Delete'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </form>
       </div>

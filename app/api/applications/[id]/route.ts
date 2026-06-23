@@ -153,3 +153,29 @@ export async function PATCH(
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Get the application first so we know the file_id for revenue sync
+    const { data: app } = await (supabase as any).from('applications').select('funding_file_id').eq('id', id).single()
+    if (!app) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const { error } = await (supabase as any).from('applications').delete().eq('id', id)
+    if (error) throw error
+
+    // Trigger will auto-recalculate revenue — but also run API sync as backup
+    await syncRevenue(app.funding_file_id)
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
+  }
+}
