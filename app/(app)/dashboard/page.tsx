@@ -6,11 +6,16 @@ import type { PipelineStage } from '@/lib/supabase/types'
 export const dynamic = 'force-dynamic'
 
 const FUNDED_STAGES: PipelineStage[] = ['funded', 'success_fee_invoice_sent', 'success_fee_collected']
+// Stages that are "actively being worked" — everything except cold leads and completed
 const ACTIVE_STAGES: PipelineStage[] = [
   'appointment_scheduled','consultation_completed','application_sent','application_submitted',
   'documents_requested','documents_received','conditions_before_submission',
   'submitted_for_funding','verification',
 ]
+// Active clients = any file past the initial lead / referral stage
+const EXCLUDED_FROM_ACTIVE: PipelineStage[] = ['lead_received', 'referral_request']
+// Total pipeline = everything except fee collected (deal fully closed)
+const EXCLUDED_FROM_PIPELINE: PipelineStage[] = ['success_fee_collected']
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -25,28 +30,31 @@ export default async function DashboardPage() {
     { data: pendingApps },
     { data: docsRaw },
   ] = await Promise.all([
-    (supabase as any).from('funding_files').select('id, client_name, business_name, stage, funding_type, next_follow_up, created_at').order('created_at', { ascending: false }),
+    (supabase as any).from('funding_files').select('id, client_name, business_name, stage, funding_type, next_followup_date, created_at').order('created_at', { ascending: false }),
     (supabase as any).from('revenue').select('funded_amount, success_fee_amount, success_fee_invoice_sent, success_fee_collected, profit, created_at'),
     (supabase as any).from('tasks').select('id, title, status, due_date, priority, funding_file_id').eq('status', 'open'),
     (supabase as any).from('applications').select('id, status, product_name, funding_file_id, funding_files(client_name, business_name)').in('status', ['submitted','in_review']),
     (supabase as any).from('documents').select('id, name, status, funding_file_id, funding_files(client_name, business_name)').eq('status', 'missing'),
   ])
 
-  const files = (allFiles ?? []) as Array<{ id: string; client_name: string; business_name: string | null; stage: string; funding_type: string | null; next_follow_up: string | null; created_at: string }>
+  const files = (allFiles ?? []) as Array<{ id: string; client_name: string; business_name: string | null; stage: string; funding_type: string | null; next_followup_date: string | null; created_at: string }>
   const revenue = (revenueRows ?? []) as Array<{ funded_amount: number; success_fee_amount: number; success_fee_invoice_sent: boolean; success_fee_collected: boolean; profit: number; created_at: string }>
   const tasks = (openTasks ?? []) as Array<{ id: string; title: string; status: string; due_date: string | null; priority: string | null; funding_file_id: string }>
   const apps = (pendingApps ?? []) as Array<{ id: string; status: string; product_name: string; funding_file_id: string; funding_files: { client_name: string; business_name: string | null } | null }>
   const missingDocs = (docsRaw ?? []) as Array<{ id: string; name: string; status: string; funding_file_id: string; funding_files: { client_name: string; business_name: string | null } | null }>
 
   // Computed KPIs
-  const activeClients = files.filter(f => ACTIVE_STAGES.includes(f.stage as PipelineStage)).length
+  // Active Clients: files being actively worked (past lead_received / referral_request)
+  const activeClients = files.filter(f => !EXCLUDED_FROM_ACTIVE.includes(f.stage as PipelineStage)).length
+  // Total pipeline: all files that are not fully closed (fee_collected)
+  const totalPipeline = files.filter(f => !EXCLUDED_FROM_PIPELINE.includes(f.stage as PipelineStage)).length
   const revenueThisMonthRows = revenue.filter(r => r.created_at >= startOfMonth)
   const fundedThisMonth = revenueThisMonthRows.length
   const fundedThisMonthAmount = revenueThisMonthRows.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
   const totalFundedAmount = revenue.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
   const revenueThisMonth = revenueThisMonthRows.reduce((s, r) => s + (r.success_fee_amount ?? 0), 0)
   const successFeesOutstanding = revenue.filter(r => r.success_fee_invoice_sent && !r.success_fee_collected).reduce((s, r) => s + (r.success_fee_amount ?? 0), 0)
-  const overdueFollowUps = files.filter(f => f.next_follow_up && f.next_follow_up <= todayStr && !FUNDED_STAGES.includes(f.stage as PipelineStage))
+  const overdueFollowUps = files.filter(f => f.next_followup_date && f.next_followup_date <= todayStr && !FUNDED_STAGES.includes(f.stage as PipelineStage))
   const overdueTasks = tasks.filter(t => t.due_date && t.due_date < todayStr)
   const inVerification = files.filter(f => f.stage === 'verification')
   const clientsFunded = files.filter(f => FUNDED_STAGES.includes(f.stage as PipelineStage))
@@ -58,8 +66,8 @@ export default async function DashboardPage() {
   }, {} as Record<string, number>)
   const maxCount = Math.max(...Object.values(stageCounts), 1)
 
-  // Needs follow-up (next_follow_up <= today, not funded)
-  const needsFollowUp = files.filter(f => f.next_follow_up && f.next_follow_up <= todayStr && !FUNDED_STAGES.includes(f.stage as PipelineStage)).slice(0, 5)
+  // Needs follow-up (next_followup_date <= today, not funded)
+  const needsFollowUp = files.filter(f => f.next_followup_date && f.next_followup_date <= todayStr && !FUNDED_STAGES.includes(f.stage as PipelineStage)).slice(0, 5)
 
   // Group missing docs by file
   const docsByFile = missingDocs.reduce((acc, d) => {
@@ -95,7 +103,7 @@ export default async function DashboardPage() {
       {/* KPI Row 1 */}
       <div className="grid gap-3 mb-3" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         {[
-          { label: 'Active Clients', value: activeClients, sub: `${files.length} total files`, color: '#4F46E5', bg: 'rgba(79,70,229,0.08)' },
+          { label: 'Active Clients', value: activeClients, sub: `${files.length} total files in system`, color: '#4F46E5', bg: 'rgba(79,70,229,0.08)' },
           { label: 'Pending Applications', value: apps.length, sub: `${apps.length} in review`, color: '#0EA5E9', bg: 'rgba(14,165,233,0.08)' },
           { label: 'Funded This Month', value: `${fundedThisMonth} deals · ${formatMoney(fundedThisMonthAmount)}`, sub: `${clientsFunded.length} total funded all-time`, color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
           { label: 'Revenue This Month', value: formatMoney(revenueThisMonth), sub: `${formatMoney(totalFundedAmount)} total funded`, color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)' },
@@ -116,7 +124,7 @@ export default async function DashboardPage() {
           { label: 'Missing Documents', value: missingDocs.length, sub: `${missingDocFiles.length} files affected`, color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
           { label: 'In Verification', value: inVerification.length, sub: inVerification.length > 0 ? 'active now' : 'none active', color: '#8B5CF6' },
           { label: 'Tasks Overdue', value: overdueTasks.length, sub: overdueTasks.length > 0 ? 'action needed' : 'all on track', color: overdueTasks.length > 0 ? '#EF4444' : '#10B981' },
-          { label: 'Total Pipeline', value: files.length, sub: `${ACTIVE_STAGES.filter(s => stageCounts[s] > 0).length} active stages`, color: '#0EA5E9' },
+          { label: 'Total Pipeline', value: totalPipeline, sub: `${ACTIVE_STAGES.filter(s => stageCounts[s] > 0).length} active stages`, color: '#0EA5E9' },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-2xl p-4" style={{ border: `1px solid ${k.urgent ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`, boxShadow: '0 1px 2px rgba(16,24,40,0.04)', backgroundColor: k.urgent ? 'rgba(239,68,68,0.03)' : 'white' }}>
             <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>{k.label}</div>
@@ -155,14 +163,14 @@ export default async function DashboardPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{f.client_name}</span>
                         <span className="text-xs font-medium" style={{ color: '#EF4444' }}>
-                          {f.next_follow_up ? new Date(f.next_follow_up + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                          {f.next_followup_date ? new Date(f.next_followup_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                         </span>
                       </div>
                       {f.business_name && <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{f.business_name}</div>}
                     </div>
                   </Link>
                 ))}
-                {files.filter(f => f.next_follow_up && !FUNDED_STAGES.includes(f.stage as PipelineStage)).length > 5 && (
+                {files.filter(f => f.next_followup_date && !FUNDED_STAGES.includes(f.stage as PipelineStage)).length > 5 && (
                   <Link href="/files" className="text-xs mt-2 block" style={{ color: '#4F46E5' }}>View all →</Link>
                 )}
               </div>

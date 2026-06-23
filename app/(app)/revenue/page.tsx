@@ -1,22 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatMoney } from '@/lib/stage-config'
 import { TrendingUp } from 'lucide-react'
+import RevenueStatusButton from '@/components/RevenueStatusButton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function RevenuePage() {
   const supabase = await createClient()
 
-  const { data: revenues } = await supabase
-    .from('revenue')
-    .select('*, funding_files(id, client_name, file_code, referral_partner_id), referral_partners:funding_files(referral_partners(name))')
-    .order('created_at', { ascending: false })
-
-  // Also get files with stage=funded for display
   const { data: revenueRows } = await supabase
     .from('revenue')
     .select('*, funding_files(id, client_name, file_code)')
     .order('created_at', { ascending: false })
+
+  // Fix 5: approved-but-not-funded applications
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: approvedApps } = await (supabase as any)
+    .from('applications')
+    .select('id, approved_amount')
+    .eq('status', 'approved')
+    .is('funded_amount', null)
+
   const rows = (revenueRows ?? []) as Array<{
     id: string
     funded_amount: number
@@ -34,6 +38,9 @@ export default async function RevenuePage() {
     created_at: string
     funding_files: { id: string; client_name: string; file_code: string } | null
   }>
+
+  const approvedList = (approvedApps ?? []) as Array<{ id: string; approved_amount: number | null }>
+  const approvedTotal = approvedList.reduce((s, a) => s + (a.approved_amount ?? 0), 0)
 
   // Aggregate KPIs
   const totalFunded = rows.reduce((s, r) => s + (r.funded_amount ?? 0), 0)
@@ -77,6 +84,26 @@ export default async function RevenuePage() {
           </div>
         ))}
       </div>
+
+      {/* Fix 5: Approved pipeline summary */}
+      {approvedList.length > 0 && (
+        <div
+          className="mb-5 px-5 py-4 rounded-2xl flex items-center justify-between"
+          style={{ backgroundColor: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.18)' }}
+        >
+          <div>
+            <span className="text-sm font-semibold" style={{ color: '#0284C7' }}>
+              Total Approved (not yet funded):
+            </span>
+            <span className="text-sm ml-2" style={{ color: 'var(--text-primary)' }}>
+              {formatMoney(approvedTotal)} across {approvedList.length} application{approvedList.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ backgroundColor: 'rgba(14,165,233,0.12)', color: '#0284C7' }}>
+            Pending Disbursement
+          </span>
+        </div>
+      )}
 
       {/* Commission breakdown */}
       <div className="grid grid-cols-3 gap-4 mb-5">
@@ -154,15 +181,11 @@ export default async function RevenuePage() {
               <div className="text-sm" style={{ color: '#EC4899' }}>{formatMoney(row.referral_commission)}</div>
               <div className="text-sm font-semibold" style={{ color: '#16A34A' }}>{formatMoney(row.profit)}</div>
               <div>
-                <span
-                  className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                  style={{
-                    backgroundColor: row.success_fee_collected ? '#D1FAE5' : row.success_fee_invoice_sent ? '#DBEAFE' : '#F0F1F6',
-                    color: row.success_fee_collected ? '#059669' : row.success_fee_invoice_sent ? '#2563EB' : '#64748B',
-                  }}
-                >
-                  {row.success_fee_collected ? 'Collected' : row.success_fee_invoice_sent ? 'Invoiced' : 'Pending'}
-                </span>
+                <RevenueStatusButton
+                  revenueId={row.id}
+                  invoiceSent={row.success_fee_invoice_sent}
+                  collected={row.success_fee_collected}
+                />
               </div>
             </div>
           ))
