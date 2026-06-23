@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { getApplications } from '@/lib/queries/applications'
+import { getApplications, getLenders } from '@/lib/queries/applications'
 import { formatMoney } from '@/lib/stage-config'
+import EditApplicationButton from '@/components/EditApplicationButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 }
 
 export default async function ApplicationsPage() {
-  const applications = await getApplications()
+  const [applications, lenders] = await Promise.all([getApplications(), getLenders()])
 
   const counts = Object.fromEntries(
     Object.keys(STATUS_CONFIG).map(s => [s, applications.filter(a => a.status === s).length])
@@ -59,7 +60,7 @@ export default async function ApplicationsPage() {
           className="px-5 py-3 text-xs font-semibold uppercase tracking-wide"
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
+            gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr auto',
             gap: '12px',
             backgroundColor: '#FAFBFD',
             borderBottom: '1px solid var(--border)',
@@ -72,6 +73,7 @@ export default async function ApplicationsPage() {
           <span>Approved</span>
           <span>Funded</span>
           <span>Submitted</span>
+          <span></span>
         </div>
 
         {applications.length === 0 ? (
@@ -82,17 +84,17 @@ export default async function ApplicationsPage() {
           applications.map((app, idx) => {
             const sc = STATUS_CONFIG[app.status] ?? STATUS_CONFIG.draft
             return (
-              <Link key={app.id} href={`/files/${app.funding_file_id}`}>
-                <div
-                  className="px-5 py-3.5 items-center transition-colors hover:bg-[#FAFBFD]"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr',
-                    gap: '12px',
-                    borderBottom: idx < applications.length - 1 ? '1px solid var(--border)' : 'none',
-                    cursor: 'pointer',
-                  }}
-                >
+              <div
+                key={app.id}
+                className="px-5 py-3.5 items-center transition-colors hover:bg-[#FAFBFD]"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1.5fr 1.2fr 1fr 1fr 1fr 1fr auto',
+                  gap: '12px',
+                  borderBottom: idx < applications.length - 1 ? '1px solid var(--border)' : 'none',
+                }}
+              >
+                <Link href={`/files/${app.funding_file_id}`} className="min-w-0 contents">
                   <div className="min-w-0">
                     <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                       {app.funding_files?.client_name ?? '—'}
@@ -128,8 +130,14 @@ export default async function ApplicationsPage() {
                       ? new Date(app.submitted_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                       : '—'}
                   </div>
+                </Link>
+                <div className="flex items-center">
+                  <EditApplicationButton
+                    application={app}
+                    lenders={lenders.map(l => ({ id: l.id, name: l.name }))}
+                  />
                 </div>
-              </Link>
+              </div>
             )
           })
         )}

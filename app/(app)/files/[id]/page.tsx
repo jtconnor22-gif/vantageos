@@ -9,6 +9,7 @@ import StageSelector from '@/components/StageSelector'
 import FileProfileActions from '@/components/FileProfileActions'
 import AssigneeSelector from '@/components/AssigneeSelector'
 import EditClientButton from '@/components/EditClientButton'
+import EditApplicationButton from '@/components/EditApplicationButton'
 import InternalNotes from '@/components/InternalNotes'
 import type { Application, Document, Task } from '@/lib/supabase/types'
 
@@ -210,9 +211,9 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
                           {app.lenders?.name ?? 'No lender'} · {app.category}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-1">
                       <span
-                        className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold mb-1"
+                        className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold"
                         style={{ backgroundColor: sc.bg, color: sc.text }}
                       >
                         {app.status.replace('_', ' ')}
@@ -222,6 +223,10 @@ export default async function FileProfilePage({ params }: { params: Promise<{ id
                           {formatMoney(app.approved_amount)}
                         </div>
                       )}
+                      <EditApplicationButton
+                        application={app}
+                        lenders={lenders.map(l => ({ id: l.id, name: l.name }))}
+                      />
                     </div>
                   </div>
                 )
