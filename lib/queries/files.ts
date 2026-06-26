@@ -26,8 +26,8 @@ export async function getFiles(): Promise<FileWithRelations[]> {
     `)
     .order('created_at', { ascending: false })
 
-  // VAs only see files assigned to them
-  if (role === 'virtual_assistant' && userId) {
+  // Non-admins only see files assigned to them
+  if ((role === 'virtual_assistant' || role === 'funding_manager') && userId) {
     query = (query as any).eq('assigned_user_id', userId)
   }
 

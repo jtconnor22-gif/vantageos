@@ -11,11 +11,11 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export function canViewRevenue(role: UserRole) {
-  return role === 'admin' || role === 'funding_manager'
+  return role === 'admin'
 }
 
 export function canViewPartners(role: UserRole) {
-  return role === 'admin' || role === 'funding_manager'
+  return role === 'admin'
 }
 
 export function canCreateFile(role: UserRole) {
