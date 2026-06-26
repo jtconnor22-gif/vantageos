@@ -12,7 +12,7 @@ interface Props {
   onClose: () => void
 }
 
-const CATEGORIES = ['Term Loan','Line of Credit','SBA Loan','Equipment Finance','Invoice Factoring','MCA','Commercial Real Estate','Revenue-Based']
+const CATEGORIES = ['Term Loan','Line of Credit','SBA Loan','Equipment Finance','Invoice Factoring','MCA','Commercial Real Estate','Revenue-Based','0% Personal','0% Business']
 
 export default function AddApplicationModal({ fileId, lenders, onClose }: Props) {
   const router = useRouter()
